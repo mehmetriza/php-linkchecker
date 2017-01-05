@@ -4,6 +4,7 @@ class cano
     public $urls=[];
     public $notUrls=[];
     public $externalUrls=[];
+    public $urlsMap=[];
 
     public $attr404=[];
     public $host="";
@@ -15,6 +16,7 @@ class cano
         $this->firstUrl=$defines["url"];
         $this->host=isset($defines["host"]) && !empty($defines["host"])?$defines["host"]:$firstUrl["host"];
         $this->urls[$this->firstUrl]="first Url";
+         $this->urlsMap[$this->firstUrl]=["parent"=>0,"name"=>"first Url"];
     }
     public function visit($url='',$name=""){
         $url=$url==''?$this->firstUrl:$url;
@@ -22,16 +24,21 @@ class cano
         if($urlControl){
             
             $content = file_get_contents($url);
-            //echo $content;
             preg_match_all('/<a.*href=\"([^\"]*)\".*>\s*(.*)\s*<\/a>/mi',$content,$match);
             //print_r($match);
             if(!empty($match[1])){
                 foreach($match[1] as $idx=>$link){  
                   
                     $parse = parse_url($link);
+                    
                     if(empty($parse)){
                         $parse["path"]=$link;
                     }
+
+                    if((!isset($parse['path'])) && isset($parse["fragment"])){
+                        continue;
+                    }
+                    
                     if(!isset($parse['host'])){
                         $urlParse=parse_url($url);
                         $link=$urlParse["scheme"]."://".$urlParse["host"];
@@ -39,7 +46,7 @@ class cano
                         $parse = parse_url($link);
                     }
                     
-                    if($parse['host']==$this->host)
+                    if($parse['host']==$this->host || $parse['host']=="www.".$this->host)
                     {
                         if(!isset($this->urls[$link]))
                         {
@@ -47,6 +54,7 @@ class cano
                             if($urlControl)
                             {
                                 $this->urls[$link]=$match[2][$idx];
+                                $this->urlsMap[$link]=["parent"=>$url,"name"=>$match[2][$idx]];
                                 $this->visit($link,$match[2][$idx]);
                             }
                         }
@@ -81,4 +89,17 @@ class cano
             return 0;
         }
     }
+    public function findChildren($list=array(),$parent=0){
+		$items = array();
+		foreach ($list as $id=>$item) {
+			if ($item['parent'] === $parent)
+			{
+				$item['children'] = $this->findChildren($list, $id);
+                $item["url"]=$id;
+				$items[] = $item;
+			}
+		}
+		
+		return $items;
+	}
 }
