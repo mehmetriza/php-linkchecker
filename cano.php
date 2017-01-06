@@ -24,7 +24,7 @@ class cano
         if($urlControl===0){
             // die();
         }
-        else{
+        else{ 
             $content= $urlControl;
             preg_match_all('/<a.*href=\"([^\"]*)\".*>\s*(.*)\s*<\/a>/mi',$content,$match);
             //print_r($match);
