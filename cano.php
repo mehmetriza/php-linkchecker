@@ -21,14 +21,16 @@ class cano
     public function visit($url='',$name=""){
         $url=$url==''?$this->firstUrl:$url;
         $urlControl=$this->url_exist($url);
-        if($urlControl){
-            
-            $content = file_get_contents($url);
+        if($urlControl===0){
+            // die();
+        }
+        else{
+            $content= $urlControl;
             preg_match_all('/<a.*href=\"([^\"]*)\".*>\s*(.*)\s*<\/a>/mi',$content,$match);
             //print_r($match);
             if(!empty($match[1])){
-                foreach($match[1] as $idx=>$link){  
-                  
+                foreach($match[1] as $idx=>$link)
+                {    
                     $parse = parse_url($link);
                     
                     if(empty($parse)){
@@ -46,17 +48,11 @@ class cano
                         $parse = parse_url($link);
                     }
                     
-                    if($parse['host']==$this->host || $parse['host']=="www.".$this->host)
-                    {
-                        if(!isset($this->urls[$link]))
-                        {
-                            $urlControl=$this->url_exist($link,$match[2][$idx]);
-                            if($urlControl)
-                            {
-                                $this->urls[$link]=$match[2][$idx];
-                                $this->urlsMap[$link]=["parent"=>$url,"name"=>$match[2][$idx]];
-                                $this->visit($link,$match[2][$idx]);
-                            }
+                    if($parse['host']==$this->host || $parse['host']=="www.".$this->host){
+                        if(!isset($this->urls[$link])){  
+                            $this->urls[$link]=$match[2][$idx];
+                            $this->urlsMap[$link]=["parent"=>$url,"name"=>$match[2][$idx]];
+                            $this->visit($link,$match[2][$idx]);
                         }
                     }
                     else{
@@ -73,18 +69,17 @@ class cano
         curl_setopt_array( $curl, array(
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION=>true,
-            CURLOPT_URL => $url 
+            CURLOPT_URL => $url, 
+            CURLOPT_ENCODING=>  ''
         ));
         $data=curl_exec( $curl );
         $header_code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
         curl_close( $curl );
         
-        if ($header_code == 301 || $header_code==200 )
-        {
-            return preg_match('/'.$this->attr404[0].'="(.*)'.preg_quote($this->attr404[1]).'(.*)"/s',$data)?0:1;
+        if ($header_code == 301 || $header_code==200 ){
+            return preg_match('/'.$this->attr404[0].'="(.*)'.preg_quote($this->attr404[1]).'(.*)"/s',$data)?0:$data;
         }
-        else
-        {
+        else{
             $this->notUrls[$url]=$name;
             return 0;
         }
@@ -92,8 +87,7 @@ class cano
     public function findChildren($list=array(),$parent=0){
 		$items = array();
 		foreach ($list as $id=>$item) {
-			if ($item['parent'] === $parent)
-			{
+			if ($item['parent'] === $parent){
 				$item['children'] = $this->findChildren($list, $id);
                 $item["url"]=$id;
 				$items[] = $item;
